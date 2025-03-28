@@ -1,0 +1,18 @@
+name: Main Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  call-shared-workflow:
+    uses: cobbg/workflow-test-2/.github/workflows/variable.yml@main
+    id: shared
+
+  print-result:
+    needs: call-shared-workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print result from shared workflow
+        run: echo "The result is: ${{ needs.call-shared-workflow.outputs.result }}"
