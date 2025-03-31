@@ -13,6 +13,10 @@ jobs:
     needs: [call-shared-workflow]
     runs-on: ubuntu-latest
     steps:
-      - name: Print result from shared workflow
-        #run: echo "The result is: ${{ needs.call-shared-workflow.outputs.result }}"
-        run: echo "This is done"
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: testing-artifact
+          path: string
+      - name: Output string
+        run: echo string
