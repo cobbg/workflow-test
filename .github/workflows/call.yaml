@@ -5,7 +5,7 @@ on:
 
 jobs:
   call-shared-workflow:
-    uses: cobbg/workflow-test-2/.github/workflows/variable.yml@main
+    uses: cobbg/workflow-test-2/.github/workflows/variable.yaml@main
     with:
       some-input: 'testing123'
 
