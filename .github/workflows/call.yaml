@@ -14,4 +14,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Print result from shared workflow
-        run: echo "The result is: ${{ needs.call-shared-workflow.outputs.result }}"
+        #run: echo "The result is: ${{ needs.call-shared-workflow.outputs.result }}"
+        run: echo "This is done"
