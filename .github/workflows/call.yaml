@@ -19,4 +19,4 @@ jobs:
           name: testing-artifact
           path: artifact
       - name: Output string
-        run: cat artifact/string
+        run: ls -la
