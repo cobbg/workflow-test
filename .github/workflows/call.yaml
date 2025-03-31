@@ -5,10 +5,11 @@ on:
 
 jobs:
   call-shared-workflow:
-    uses: cobbg/workflow-test-2/.github/workflows/variable.yml@main
-    with:
-      some-input: 'testing123'
     id: shared
+    steps:
+      - uses: cobbg/workflow-test-2/.github/workflows/variable.yml@main
+        with:
+          some-input: 'testing123'
 
   print-result:
     needs: call-shared-workflow
