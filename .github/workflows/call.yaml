@@ -20,3 +20,5 @@ jobs:
           path: artifact
       - name: Output string
         run: cat ./artifact/string
+      - name: List directory
+        run: ls -la ./artifact/string
