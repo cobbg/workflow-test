@@ -18,7 +18,5 @@ jobs:
         with:
           name: testing-artifact
           path: string
-      - name: Unzip artifact
-        run: unzip testing-artifact.zip
       - name: Output string
-        run: echo string
+        run: cat string
