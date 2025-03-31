@@ -5,13 +5,12 @@ on:
 
 jobs:
   call-shared-workflow:
-    id: shared
     uses: cobbg/workflow-test-2/.github/workflows/variable.yaml@main
     with:
       some-input: 'testing123'
 
   print-result:
-    needs: call-shared-workflow
+    needs: [call-shared-workflow]
     runs-on: ubuntu-latest
     steps:
       - name: Print result from shared workflow
