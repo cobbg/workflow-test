@@ -17,5 +17,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: testing-artifact
+          path: ./
       - name: Output string
         run: cat string
