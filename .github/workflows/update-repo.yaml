@@ -19,7 +19,7 @@ jobs:
 
       - name: Make changes to the target repo
         run: |
-          cd target-repo
+          cd workflow-test-2
 
           # Example change: update a file
           echo "Updated on $(date)" >> some-file.txt
