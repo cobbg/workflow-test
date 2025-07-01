@@ -2,33 +2,38 @@ name: Update file in workflow-test-2
 
 on:
   workflow_dispatch:
+    inputs:
+      filename:
+        description: 'File to update in target repo'
+        required: true
+        default: 'test.txt'
 
 jobs:
   update-file:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repo A (source)
-        uses: actions/checkout@v4
+    - name: Checkout source repo (workflow-test)
+      uses: actions/checkout@v4
 
-      - name: Checkout Repo B (target)
-        uses: actions/checkout@v4
-        with:
-          repository: gcobb/workflow-test-2
-          token: ${{ secrets.TARGET_REPO_TOKEN }}
-          path: workflow-test-2
+    - name: Checkout target repo (workflow-test-2)
+      uses: actions/checkout@v4
+      with:
+        repository: cobbg/workflow-test-2
+        token: ${{ secrets.TARGET_REPO_TOKEN }}
+        path: target-repo
 
-      - name: Make changes to the target repo
-        run: |
-          cd workflow-test-2
+    - name: Make change in target repo
+      run: |
+        cd target-repo
 
-          # Example change: update a file
-          echo "Updated on $(date)" >> some-file.txt
+        # Example change: append a timestamp to the file
+        echo "Updated by workflow at $(date)" >> ${{ github.event.inputs.filename }}
 
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
 
-          git add some-file.txt
-          git commit -m "Automated update from Repo A"
-          git push
-
+        git add ${{ github.event.inputs.filename }}
+        git commit -m "Automated update to ${{ github.event.inputs.filename }} from workflow-test"
+        git push
 
