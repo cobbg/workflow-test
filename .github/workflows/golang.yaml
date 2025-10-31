@@ -1,4 +1,4 @@
-name: Inline Go Example
+name: Go API Example
 
 on:
   workflow_dispatch:
@@ -7,24 +7,70 @@ jobs:
   run-go-inline:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
-      - name: Run inline Go code
+      - name: Use Go to query GitHub API
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          cat <<'EOF' > main.go
+          go run - <<'EOF'
           package main
 
           import (
+            "encoding/json"
             "fmt"
+            "net/http"
+            "os"
             "time"
           )
 
+          type PullRequest struct {
+            Title string `json:"title"`
+            User  struct {
+              Login string `json:"login"`
+            } `json:"user"`
+            CreatedAt time.Time `json:"created_at"`
+          }
+
           func main() {
-            fmt.Println("Hello from Go inside GitHub Actions!")
-            fmt.Println("The time is:", time.Now())
+            repo := os.Getenv("REPO")
+            token := os.Getenv("GITHUB_TOKEN")
+
+            if repo == "" || token == "" {
+              fmt.Println("Missing required environment variables.")
+              os.Exit(1)
+            }
+
+            url := fmt.Sprintf("https://api.github.com/repos/%s/pulls?state=open", repo)
+            req, _ := http.NewRequest("GET", url, nil)
+            req.Header.Add("Authorization", "token "+token)
+            req.Header.Add("Accept", "application/vnd.github+json")
+
+            resp, err := http.DefaultClient.Do(req)
+            if err != nil {
+              fmt.Println("HTTP error:", err)
+              os.Exit(1)
+            }
+            defer resp.Body.Close()
+
+            if resp.StatusCode != 200 {
+              fmt.Printf("GitHub API returned %d\n", resp.StatusCode)
+              os.Exit(1)
+            }
+
+            var prs []PullRequest
+            if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
+              fmt.Println("Decode error:", err)
+              os.Exit(1)
+            }
+
+            fmt.Printf("📊 Found %d open pull requests:\n", len(prs))
+            for _, pr := range prs {
+              fmt.Printf("- %s (by @%s on %s)\n", pr.Title, pr.User.Login, pr.CreatedAt.Format("Jan 2, 2006"))
+            }
           }
           EOF
-          go run main.go
