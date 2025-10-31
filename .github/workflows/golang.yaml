@@ -1,4 +1,4 @@
-name: Go API Example (fixed formatting)
+name: Go API Example (reliable)
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          go run - <<'EOF'
+          cat > main.go <<'EOF'
           package main
 
           import (
@@ -78,3 +78,5 @@ jobs:
             }
           }
           EOF
+
+          go run main.go
