@@ -1,10 +1,10 @@
-name: Go API Example (reliable)
+name: Go Concurrent GitHub API Example
 
 on:
   workflow_dispatch:
 
 jobs:
-  run-go-inline:
+  go-concurrent:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -15,7 +15,7 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Use Go to query GitHub API
+      - name: Run concurrent Go API logic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -28,6 +28,7 @@ jobs:
             "fmt"
             "net/http"
             "os"
+            "sync"
             "time"
           )
 
@@ -39,6 +40,38 @@ jobs:
             CreatedAt time.Time `json:"created_at"`
           }
 
+          type Issue struct {
+            Title string `json:"title"`
+            User  struct {
+              Login string `json:"login"`
+            } `json:"user"`
+            State string `json:"state"`
+          }
+
+          type Release struct {
+            TagName string `json:"tag_name"`
+            Name    string `json:"name"`
+            Created time.Time `json:"created_at"`
+          }
+
+          func fetchJSON(url, token string, target any) error {
+            req, _ := http.NewRequest("GET", url, nil)
+            req.Header.Add("Authorization", "token "+token)
+            req.Header.Add("Accept", "application/vnd.github+json")
+
+            resp, err := http.DefaultClient.Do(req)
+            if err != nil {
+              return err
+            }
+            defer resp.Body.Close()
+
+            if resp.StatusCode != 200 {
+              return fmt.Errorf("GitHub API returned %d for %s", resp.StatusCode, url)
+            }
+
+            return json.NewDecoder(resp.Body).Decode(target)
+          }
+
           func main() {
             repo := os.Getenv("REPO")
             token := os.Getenv("GITHUB_TOKEN")
@@ -48,33 +81,58 @@ jobs:
               os.Exit(1)
             }
 
-            url := fmt.Sprintf("https://api.github.com/repos/%s/pulls?state=open", repo)
-            req, _ := http.NewRequest("GET", url, nil)
-            req.Header.Add("Authorization", "token "+token)
-            req.Header.Add("Accept", "application/vnd.github+json")
-
-            resp, err := http.DefaultClient.Do(req)
-            if err != nil {
-              fmt.Fprintln(os.Stderr, "HTTP error:", err)
-              os.Exit(1)
-            }
-            defer resp.Body.Close()
-
-            if resp.StatusCode != 200 {
-              fmt.Fprintf(os.Stderr, "GitHub API returned %d\n", resp.StatusCode)
-              os.Exit(1)
-            }
+            prURL := fmt.Sprintf("https://api.github.com/repos/%s/pulls?state=open", repo)
+            issuesURL := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=open&filter=all", repo)
+            releasesURL := fmt.Sprintf("https://api.github.com/repos/%s/releases", repo)
 
             var prs []PullRequest
-            if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
-              fmt.Fprintln(os.Stderr, "Decode error:", err)
+            var issues []Issue
+            var releases []Release
+
+            var wg sync.WaitGroup
+            var mu sync.Mutex
+            errs := []error{}
+
+            fetch := func(name string, fn func() error) {
+              defer wg.Done()
+              if err := fn(); err != nil {
+                mu.Lock()
+                errs = append(errs, fmt.Errorf("%s: %v", name, err))
+                mu.Unlock()
+              }
+            }
+
+            wg.Add(3)
+            go fetch("pull requests", func() error { return fetchJSON(prURL, token, &prs) })
+            go fetch("issues", func() error { return fetchJSON(issuesURL, token, &issues) })
+            go fetch("releases", func() error { return fetchJSON(releasesURL, token, &releases) })
+            wg.Wait()
+
+            if len(errs) > 0 {
+              fmt.Fprintln(os.Stderr, "Errors during fetch:")
+              for _, e := range errs {
+                fmt.Fprintln(os.Stderr, "-", e)
+              }
               os.Exit(1)
             }
 
-            fmt.Printf("📊 Found %d open pull requests:\n", len(prs))
-            for _, pr := range prs {
-              fmt.Printf("- %s (by @%s on %s)\n",
-                pr.Title, pr.User.Login, pr.CreatedAt.Format("Jan 2, 2006"))
+            fmt.Printf("\n📊 Repository summary for %s\n", repo)
+            fmt.Printf("🟢 %d open pull requests\n", len(prs))
+            fmt.Printf("🟡 %d open issues\n", len(issues))
+            fmt.Printf("🔵 %d releases\n", len(releases))
+
+            if len(prs) > 0 {
+              fmt.Println("\nRecent Pull Requests:")
+              for _, pr := range prs {
+                fmt.Printf("- %s (by @%s on %s)\n",
+                  pr.Title, pr.User.Login, pr.CreatedAt.Format("Jan 2, 2006"))
+              }
+            }
+
+            if len(releases) > 0 {
+              fmt.Println("\nLatest Release:")
+              r := releases[0]
+              fmt.Printf("- %s (%s)\n", r.Name, r.TagName)
             }
           }
           EOF
