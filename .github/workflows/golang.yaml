@@ -1,16 +1,30 @@
-name: Main Workflow
+name: Inline Go Example
 
 on:
-  push:
-    branches:
-      - main
-      - testing
   workflow_dispatch:
 
 jobs:
-  testing:
-    uses: cobbg/workflow-test-2/.github/workflows/variable.yaml@main
-    with:
-      some-input: 'testing123'
-    run: |
-      echo "This is a test"
+  run-go-inline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Run inline Go code
+        run: |
+          cat <<'EOF' > main.go
+          package main
+
+          import (
+            "fmt"
+            "time"
+          )
+
+          func main() {
+            fmt.Println("Hello from Go inside GitHub Actions!")
+            fmt.Println("The time is:", time.Now())
+          }
+          EOF
+          go run main.go
