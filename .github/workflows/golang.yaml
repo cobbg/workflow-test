@@ -1,4 +1,4 @@
-name: Go API Example
+name: Go API Example (fixed formatting)
 
 on:
   workflow_dispatch:
@@ -7,6 +7,9 @@ jobs:
   run-go-inline:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -41,7 +44,7 @@ jobs:
             token := os.Getenv("GITHUB_TOKEN")
 
             if repo == "" || token == "" {
-              fmt.Println("Missing required environment variables.")
+              fmt.Fprintln(os.Stderr, "Missing required environment variables.")
               os.Exit(1)
             }
 
@@ -52,25 +55,26 @@ jobs:
 
             resp, err := http.DefaultClient.Do(req)
             if err != nil {
-              fmt.Println("HTTP error:", err)
+              fmt.Fprintln(os.Stderr, "HTTP error:", err)
               os.Exit(1)
             }
             defer resp.Body.Close()
 
             if resp.StatusCode != 200 {
-              fmt.Printf("GitHub API returned %d\n", resp.StatusCode)
+              fmt.Fprintf(os.Stderr, "GitHub API returned %d\n", resp.StatusCode)
               os.Exit(1)
             }
 
             var prs []PullRequest
             if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
-              fmt.Println("Decode error:", err)
+              fmt.Fprintln(os.Stderr, "Decode error:", err)
               os.Exit(1)
             }
 
             fmt.Printf("📊 Found %d open pull requests:\n", len(prs))
             for _, pr := range prs {
-              fmt.Printf("- %s (by @%s on %s)\n", pr.Title, pr.User.Login, pr.CreatedAt.Format("Jan 2, 2006"))
+              fmt.Printf("- %s (by @%s on %s)\n",
+                pr.Title, pr.User.Login, pr.CreatedAt.Format("Jan 2, 2006"))
             }
           }
           EOF
